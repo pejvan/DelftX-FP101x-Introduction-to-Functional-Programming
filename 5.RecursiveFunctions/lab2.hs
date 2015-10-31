@@ -29,6 +29,7 @@ toDigitsRev n = reverse (toDigits n)
 
 doubleSecond :: [Integer] -> [Integer]
 doubleSecond [] = []
+doubleSecond [x] = [x]
 doubleSecond (x:xs) = x : (2 * head xs) : doubleSecond (tail xs)
 
 -- ===================================
