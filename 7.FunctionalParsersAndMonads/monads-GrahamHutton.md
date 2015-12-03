@@ -73,7 +73,7 @@ eval (Div x y) =  eval x `div` eval y
 
 However, this function doesn't take account of the possibility of 
 division by zero, and will produce an error in this case.  In order
-to deal with this explicitly, we can use the Maybe type
+to deal with this explicitly, we can use the `Maybe` type
 
 ```data Maybe a = Nothing | Just a```
 
@@ -98,7 +98,7 @@ As in the previous section, we can observe a common pattern, namely
 performing a `case` analysis on a value of a `Maybe` type, mapping `Nothing`
 to itself, and `Just x` to some result depending upon `x`.  (Aside: we
 could go further and also take account of the fact that the case
-analysis is performed on the result of an eval, but this would
+analysis is performed on the result of an `eval`, but this would
 lead to the more advanced notion of a monadic fold.)
 
 How should this pattern be abstracted out? One approach would be
@@ -120,7 +120,7 @@ eval (Div x y) = apply f (eval x `seqn` eval y)
                  where f (n,m) = safediv n m
 ```
 
-The auxiliary function apply is an analogue of application for Maybe,
+The auxiliary function apply is an analogue of application for `Maybe`,
 and is used to process the results of the two evaluations:
 ```
 apply            :: (a -> Maybe b) -> Maybe a -> Maybe b
@@ -128,9 +128,9 @@ apply f Nothing  =  Nothing
 apply f (Just x) =  f x
 ```
 
-In practice, however, using seqn can lead to programs that manipulate
-nested tuples, which can be messy.  For example, the evaluation of
-an operator Op with three arguments may be defined by:
+In practice, however, using `seqn` can lead to programs that manipulate
+nested tuples, which can be messy. For example, the evaluation of
+an operator `Op` with three arguments may be defined by:
 
 ```
 eval (Op x y z) = apply f (eval x `seqn` (eval y `seqn` eval z))
@@ -141,9 +141,9 @@ eval (Op x y z) = apply f (eval x `seqn` (eval y `seqn` eval z))
 
 The problem of nested tuples can be avoided by returning of our 
 original observation of a common pattern: "performing a case analysis
-on a value of a Maybe type, mapping Nothing to itself, and Just x to
-some result depending upon x".   Abstract this pattern directly gives
-a new sequencing operator that we write as >>=, and read as "then":
+on a value of a `Maybe` type, mapping `Nothing` to itself, and `Just x` to
+some result depending upon `x`".   Abstract this pattern directly gives
+a new sequencing operator that we write as `>>=`, and read as "then":
 
 ```
 (>>=)   :: Maybe a -> (a -> Maybe b) -> Maybe b
@@ -160,8 +160,8 @@ Nothing  >>= _ = Nothing
 (Just x) >>= f = f x
 ```
 
-That is, if the first argument is Nothing then the second argument
-is ignored and Nothing is returned as the result.  Otherwise, if
+That is, if the first argument is `Nothing` then the second argument
+is ignored and `Nothing` is returned as the result.  Otherwise, if
 the first argument is of the form `Just x`, then the second argument
 is applied to `x` to give a result of type `Maybe b`.
 
@@ -201,9 +201,9 @@ f x1 x2 ... xn
 That is, evaluate each of the expression `m1,m2,...,mn` in turn, and
 combine their result values `x1,x2,...,xn` by applying the function `f`.
 The definition of `>>=` ensures that such an expression only succeeds
-(returns a value built using Just) if each mi in the sequence succeeds.
+(returns a value built using `Just`) if each `mi` in the sequence succeeds.
 In other words, the programmer does not have to worry about dealing
-with the possible failure (returning Nothing) of any of the component
+with the possible failure (returning `Nothing`) of any of the component
 expressions, as this is handled automatically by the `>>=` operator. 
 
 Haskell provides a special notation for expressions of the above
