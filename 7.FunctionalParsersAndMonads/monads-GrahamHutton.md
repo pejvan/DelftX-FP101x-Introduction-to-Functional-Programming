@@ -95,15 +95,15 @@ eval (Div x y) =  case eval x of
  ```
  
 As in the previous section, we can observe a common pattern, namely
-performing a case analysis on a value of a Maybe type, mapping Nothing
-to itself, and Just `x` to some result depending upon `x`.  (Aside: we
+performing a `case` analysis on a value of a `Maybe` type, mapping `Nothing`
+to itself, and `Just x` to some result depending upon `x`.  (Aside: we
 could go further and also take account of the fact that the case
 analysis is performed on the result of an eval, but this would
 lead to the more advanced notion of a monadic fold.)
 
-How should this pattern be abstracted out?  One approach would be
+How should this pattern be abstracted out? One approach would be
 to observe that a key notion in the evaluation of division is the
-sequencing of two values of a Maybe type, namely the results of
+sequencing of two values of a `Maybe` type, namely the results of
 evaluating the two arguments of the division.  Based upon this
 observation, we could define a sequencing function
 ```
