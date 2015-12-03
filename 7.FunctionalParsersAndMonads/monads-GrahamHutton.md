@@ -252,45 +252,49 @@ then we obtain our first example, called the maybe monad.
 In fact, we can capture the notion of a monad as a new class
 declaration.  In Haskell, a class is a collection of types that
 support certain overloaded functions.  For example, the class
-Eq of equality types can be declared as follows:
-
+`Eq` of equality types can be declared as follows:
+```
    class Eq a where
-      (==) :: a -> a -> Bool
-      (/=) :: a -> a -> Bool
+   (==) :: a -> a -> Bool
+   (/=) :: a -> a -> Bool
 
-      x /= y = not (x == y)
+   x /= y = not (x == y)
+```
 
 The declaration states that for a type "a" to be an instance of
-the class Eq, it must support equality and inequality operators
+the class `Eq`, it must support equality and inequality operators
 of the specified types.  In fact, because a default definition
-has already been included for /=, declaring an instance of this
-class only requires a definition for ==.  For example, the type
-Bool can be made into an equality type as follows:
-
-   instance Eq Bool where
-      False == False = True
-      True  == True  = True
-      _     == _     = False
+has already been included for `/=`, declaring an instance of this
+class only requires a definition for `==`.  For example, the type
+`Bool` can be made into an equality type as follows:
+```haskell
+instance Eq Bool where
+   False == False = True
+   True  == True  = True
+   _     == _     = False
+```
 
 The notion of a monad can now be captured as follows:
-
-   class Monad m where
-      return :: a -> m a
-      (>>=)  :: m a -> (a -> m b) -> m b
+```haskell
+class Monad m where
+   return :: a -> m a
+   (>>=)  :: m a -> (a -> m b) -> m b
+```
 
 That is, a monad is a parameterised type "m" that supports return
-and >>= functions of the specified types.  The fact that m must be
+and `>>=` functions of the specified types.  The fact that `m` must be
 a parameterised type, rather than just a type, is inferred from its
-use in the types for the two functions.   Using this declaration,
-it is now straightforward to make Maybe into a monadic type:
+use in the types for the two functions. Using this declaration,
+it is now straightforward to make `Maybe` into a monadic type:
+```haskell
+instance Monad Maybe where
+   -- return      :: a -> Maybe a
+   return x       =  Just x
 
-   instance Monad Maybe where
-      -- return      :: a -> Maybe a
-      return x       =  Just x
-
-      -- (>>=)       :: Maybe a -> (a -> Maybe b) -> Maybe b
-      Nothing  >>= _ =  Nothing
-      (Just x) >>= f =  f x
+   -- (>>=)       :: Maybe a -> (a -> Maybe b) -> Maybe b
+   Nothing  >>= _ =  Nothing
+   (Just x) >>= f =  f x
+```
 
 (Aside: types are not permitted in instance declarations, but we
 include them as comments for reference.)  It is because of this
@@ -300,62 +304,64 @@ with any monadic type.  In the next few sections we give some
 further examples of types that are monadic, and the benefits
 that result from recognising and exploiting this fact.
 
-
-#The list monad
+##The list monad
 
 The maybe monad provides a simple model of computations that can
-fail, in the sense that a value of type Maybe a is either Nothing,
+fail, in the sense that a value of type `Maybe` a is either `Nothing`,
 which we can think of as representing failure, or has the form
-Just x for some x of type a, which we can think of as success.
+`Just x` for some `x` of type a, which we can think of as success.
 
 The list monad generalises this notion, by permitting multiple
 results in the case of success.  More precisely, a value of
-[a] is either the empty list [], which we can think of as
-failure, or has the form of a non-empty list [x1,x2,...,xn]
-for some xi of type a, which we can think of as success.
+`[a]` is either the empty list `[]`, which we can think of as
+failure, or has the form of a non-empty list `[x1,x2,...,xn]`
+for some `xi` of type `a`, which we can think of as success.
 Making lists into a monadic type is straightforward:
+```haskell
+instance Monad [] where
+   -- return :: a -> [a]
+   return x  =  [x]
 
-   instance Monad [] where
-      -- return :: a -> [a]
-      return x  =  [x]
+   -- (>>=)  :: [a] -> (a -> [b]) -> [b]
+   xs >>= f  =  concat (map f xs)
+```
 
-      -- (>>=)  :: [a] -> (a -> [b]) -> [b]
-      xs >>= f  =  concat (map f xs)
-
-(Aside: in this context, [] denotes the list type [a] without
+(Aside: in this context, `[]` denotes the list type `[a]` without
 its parameter.)  That is, return simply converts a value into a
-successful result containing that value, while >>= provides a
+successful result containing that value, while `>>=` provides a
 means of sequencing computations that may produce multiple
-results: xs >>= f applies the function f to each of the results
-in the list xs to give a nested list of results, which is then
+results: `xs >>= f` applies the function `f` to each of the results
+in the list `xs` to give a nested list of results, which is then
 concatenated to give a single list of results.
 
 As a simple example of the use of the list monad, a function
 that returns all possible ways of pairing elements from two 
 lists can be defined using the do notation as follows:
+```haskell
+pairs     :: [a] -> [b] -> [(a,b)]
+pairs xs ys =  do x <- xs
+                  y <- ys
+                 return (x,y)
+```
 
-     pairs     :: [a] -> [b] -> [(a,b)]
-     pairs xs ys =  do x <- xs
-                       y <- ys
-                       return (x,y)
-
-That is, consider each possible value x from the list xs, and 
-each value y from the list ys, and return the pair (x,y).  It
+That is, consider each possible value `x` from the list `xs`, and 
+each value `y` from the list `ys`, and return the pair `(x,y)`.  It
 is interesting to note the similarity to how this function
 would be defined using the list comprehension notation:
+```haskell
+pairs xs ys = [(x,y) | x <- xs, y <- ys]
+```
 
-     pairs xs ys = [(x,y) | x <- xs, y <- ys]
-
-In fact, there is a formal connection between the do notation
+In fact, there is a formal connection between the `do` notation
 and the comprehension notation.  Both are simply different 
-shorthands for repeated use of the >>= operator for lists.
+shorthands for repeated use of the `>>=` operator for lists.
 Indeed, the language Gofer that was one of the precursors
 to Haskell permitted the comprehension notation to be used 
 with any monad.  For simplicity however, Haskell only allows
 the comprehension notation to be used with lists.
 
 
-#The state monad
+##The state monad
 
 Now let us consider the problem of writing functions that
 manipulate some kind of state, represented by a type whose
