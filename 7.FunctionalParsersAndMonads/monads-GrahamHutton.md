@@ -1,4 +1,5 @@
 [PROGRAMMING WITH EFFECTS](http://www.cs.nott.ac.uk/~pszgmh/monads)
+
 Graham Hutton, January 2015
 
 
@@ -26,7 +27,6 @@ the use of monads for programming with effects in Haskell.
 
 
 #Abstracting programming patterns
---------------------------------
 
 Monads are an example of the idea of abstracting out a common
 programming pattern as a definition.  Before considering monads,
@@ -58,7 +58,6 @@ using which our two examples can now be defined more compactly:
 
 
 #A simple evaluator
-------------------
 
 Consider the following simple language of expressions that are
 built up from integer values using a division operator:
@@ -132,7 +131,6 @@ an operator Op with three arguments may be defined by:
 
 
 #Combining sequencing and processing
------------------------------------
 
 The problem of nested tuples can be avoided by returning of our 
 original observation of a common pattern: "performing a case analysis
@@ -221,7 +219,6 @@ o Redefine seqn x y and eval (Op x y z) using the do notation.
 
 
 #Monads in Haskell
------------------
 
 The do notation for sequencing is not specific to the Maybe type,
 but can be used with any type that forms a "monad".  The general
@@ -292,7 +289,6 @@ that result from recognising and exploiting this fact.
 
 
 #The list monad
---------------
 
 The maybe monad provides a simple model of computations that can
 fail, in the sense that a value of type Maybe a is either Nothing,
@@ -347,7 +343,6 @@ the comprehension notation to be used with lists.
 
 
 #The state monad
----------------
 
 Now let us consider the problem of writing functions that
 manipulate some kind of state, represented by a type whose
@@ -468,7 +463,6 @@ of Haskell, rather than the "data" mechanism.
 
 
 #An example
-----------
 
 By way of an example of using the state monad, let us first define
 a type of binary trees whose leaves contains values of some type a:
@@ -535,7 +529,6 @@ o Define a function run :: ST a -> State -> a, such that label
 
 
 #The IO monad
-------------
 
 Recall that interactive programs in Haskell are written using the
 type IO a of "actions" that return a result of type a, but may
@@ -578,7 +571,6 @@ behaviour of actions, the above interpretation can be useful.
 
 
 #Derived primitives
-------------------
 
 An important benefit of abstracting out the notion of a monad
 is that it then becomes possible to define a number of useful 
@@ -634,7 +626,6 @@ o Define a monadic generalisation of foldr:
 
 
 #The monad laws
---------------
 
 Earlier we mentioned that the notion of a monad requires that the
 return and >>= functions satisfy some simple properties.    The
@@ -700,7 +691,6 @@ o Show that the maybe monad satisfies equations (1), (2) and (3).
 
 
 #An exercise
------------
 
 Given the type
 
@@ -723,7 +713,6 @@ example, explain what the >>= operator for this type does.
 
 
 #Other topics
-------------
 
 The subject of monads is a large one, and we have only scratched
 the surface here.  If you are interested in finding out more, 
