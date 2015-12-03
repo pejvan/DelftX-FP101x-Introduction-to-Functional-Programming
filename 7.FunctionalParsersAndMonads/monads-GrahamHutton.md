@@ -45,14 +45,14 @@ namely mapping the empty list to itself, and a non-empty list
 to some function applied to the head of the list and the result
 of recursively processing the tail of the list in the same manner.
 Abstracting this pattern gives the library function called map
-```
+```haskell
 map         :: (a -> b) -> [a] -> [b]
 map f []     = []
 map f (x:xs) = f x : map f xs
 ```
 
 using which our two examples can now be defined more compactly:
-```
+```haskell
    inc = map (+1)
    sqr = map (^2)
 ```
@@ -65,7 +65,7 @@ built up from integer values using a division operator:
 ```data Expr = Val Int | Div Expr Expr```
 
 Such expressions can be evaluated as follows:
-```
+```haskell
 eval           :: Expr -> Int
 eval (Val n)   =  n
 eval (Div x y) =  eval x `div` eval y
@@ -75,16 +75,18 @@ However, this function doesn't take account of the possibility of
 division by zero, and will produce an error in this case.  In order
 to deal with this explicitly, we can use the `Maybe` type
 
-```data Maybe a = Nothing | Just a```
+```haskell
+data Maybe a = Nothing | Just a
+```
 
 to define a "safe" version of division
-```
+```haskell
 safediv     :: Int -> Int -> Maybe Int
 safediv n m =  if m == 0 then Nothing else Just (n `div` m)
 ```
 
 and then modify our evaluator as follows:
-```
+```haskell
 eval           :: Expr -> Maybe Int
 eval (Val n)   =  Just n
 eval (Div x y) =  case eval x of
@@ -106,7 +108,7 @@ to observe that a key notion in the evaluation of division is the
 sequencing of two values of a `Maybe` type, namely the results of
 evaluating the two arguments of the division.  Based upon this
 observation, we could define a sequencing function
-```
+```haskell
 seqn                    :: Maybe a -> Maybe b -> Maybe (a,b)
 seqn Nothing   _        =  Nothing
 seqn _         Nothing  =  Nothing
@@ -114,7 +116,7 @@ seqn (Just x)  (Just y) =  Just (x,y)
 ```
 
 using which our evaluator can now be defined more compactly:
-```
+```haskell
 eval (Val n)   = Just n
 eval (Div x y) = apply f (eval x `seqn` eval y)
                  where f (n,m) = safediv n m
@@ -122,7 +124,7 @@ eval (Div x y) = apply f (eval x `seqn` eval y)
 
 The auxiliary function apply is an analogue of application for `Maybe`,
 and is used to process the results of the two evaluations:
-```
+```haskell
 apply            :: (a -> Maybe b) -> Maybe a -> Maybe b
 apply f Nothing  =  Nothing
 apply f (Just x) =  f x
@@ -132,7 +134,7 @@ In practice, however, using `seqn` can lead to programs that manipulate
 nested tuples, which can be messy. For example, the evaluation of
 an operator `Op` with three arguments may be defined by:
 
-```
+```haskell
 eval (Op x y z) = apply f (eval x `seqn` (eval y `seqn` eval z))
                   where f (a,(b,c)) = ...
 ```
@@ -145,7 +147,7 @@ on a value of a `Maybe` type, mapping `Nothing` to itself, and `Just x` to
 some result depending upon `x`".   Abstract this pattern directly gives
 a new sequencing operator that we write as `>>=`, and read as "then":
 
-```
+```haskell
 (>>=)   :: Maybe a -> (a -> Maybe b) -> Maybe b
 m >>= f =  case m of
               Nothing -> Nothing
@@ -154,7 +156,7 @@ m >>= f =  case m of
 
 Replacing the use of case analysis by pattern matching gives a
 more compact definition for this operator:
-```
+```haskell
 (>>=)         :: Maybe a -> (a -> Maybe b) -> Maybe b
 Nothing  >>= _ = Nothing
 (Just x) >>= f = f x
@@ -175,7 +177,7 @@ the second argument binds the result of the first.  Note also that
 `>>=` is just apply with the order of its arguments swapped.
 
 Using `>>=`, our evaluator can now be rewritten as:
-```
+```haskell
 eval (Val n)   = Just n
 eval (Div x y) = eval x >>= (\n ->
                  eval y >>= (\m ->
@@ -190,7 +192,7 @@ parentheses in the case for division can freely be omitted.
 
 Generalising from this example, a typical expression built using
 the `>>=` operator has the following structure:
-```
+```haskell
 m1 >>= \x1 ->
 m2 >>= \x2 ->
 ...
@@ -216,7 +218,7 @@ do x1 <- m1
    f x1 x2 ... xn
 ```
 Hence, for example, our evaluator can be redefined as:
-```
+```haskell
 eval (Val n)   = Just n
 eval (Div x y) = do n <- eval x
                     m <- eval y
@@ -237,7 +239,7 @@ but can be used with any type that forms a "monad".  The general
 concept comes from a branch of mathematics called category theory.
 In Haskell, however, a monad is simply a parameterised type `m`,
 together with two functions of the following types:
-```
+```haskell
    return :: a -> m a
 
    (>>=)  :: m a -> (a -> m b) -> m b
@@ -253,7 +255,7 @@ In fact, we can capture the notion of a monad as a new class
 declaration.  In Haskell, a class is a collection of types that
 support certain overloaded functions.  For example, the class
 `Eq` of equality types can be declared as follows:
-```
+```haskell
    class Eq a where
    (==) :: a -> a -> Bool
    (/=) :: a -> a -> Bool
