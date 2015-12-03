@@ -1,17 +1,17 @@
-[PROGRAMMING WITH EFFECTS](http://www.cs.nott.ac.uk/~pszgmh/monads)
+#[PROGRAMMING WITH EFFECTS](http://www.cs.nott.ac.uk/~pszgmh/monads)
 
 Graham Hutton, January 2015
 
 
-#Shall we be pure or impure?
+##Shall we be pure or impure?
 
 The functional programming community divides into two camps:
 
- o "Pure" languages, such as Haskell, are based directly
+ * "Pure" languages, such as Haskell, are based directly
    upon the mathematical notion of a function as a
    mapping from arguments to results.
 
- o "Impure" languages, such as ML, are based upon the 
+ * "Impure" languages, such as ML, are based upon the 
    extension of this notion with a range of possible
    effects, such as exceptions and assignments.
 
@@ -26,74 +26,77 @@ based upon the notion of a "monad".  This note introduces
 the use of monads for programming with effects in Haskell.
 
 
-#Abstracting programming patterns
+##Abstracting programming patterns
 
 Monads are an example of the idea of abstracting out a common
 programming pattern as a definition.  Before considering monads,
 let us review this idea, by means of two simple functions:
+```
+inc        :: [Int] -> [Int]
+inc []     =  []
+inc (n:ns) =  n+1 : inc ns
 
-   inc          :: [Int] -> [Int]
-   inc []     =  []
-   inc (n:ns) =  n+1 : inc ns
-
-   sqr          :: [Int] -> [Int]
-   sqr []     =  []
-   sqr (n:ns) =  n^2 : sqr ns
-
+sqr        :: [Int] -> [Int]
+sqr []     =  []
+sqr (n:ns) =  n^2 : sqr ns
+```
 Both functions are defined using the same programming pattern,
 namely mapping the empty list to itself, and a non-empty list
 to some function applied to the head of the list and the result
 of recursively processing the tail of the list in the same manner.
 Abstracting this pattern gives the library function called map
-
-   map         :: (a -> b) -> [a] -> [b]
-   map f []     = []
-   map f (x:xs) = f x : map f xs
+```
+map         :: (a -> b) -> [a] -> [b]
+map f []     = []
+map f (x:xs) = f x : map f xs
+```
 
 using which our two examples can now be defined more compactly:
-
+```
    inc = map (+1)
-
    sqr = map (^2)
-
+```
 
 #A simple evaluator
 
 Consider the following simple language of expressions that are
 built up from integer values using a division operator:
 
-   data Expr = Val Int | Div Expr Expr
+```data Expr = Val Int | Div Expr Expr```
 
 Such expressions can be evaluated as follows:
-
-   eval           :: Expr -> Int
-   eval (Val n)   =  n
-   eval (Div x y) =  eval x `div` eval y
+```
+eval           :: Expr -> Int
+eval (Val n)   =  n
+eval (Div x y) =  eval x `div` eval y
+```
 
 However, this function doesn't take account of the possibility of 
 division by zero, and will produce an error in this case.  In order
 to deal with this explicitly, we can use the Maybe type
 
-   data Maybe a = Nothing | Just a
+```data Maybe a = Nothing | Just a```
 
 to define a "safe" version of division
-
-   safediv     :: Int -> Int -> Maybe Int
-   safediv n m =  if m == 0 then Nothing else Just (n `div` m)
+```
+safediv     :: Int -> Int -> Maybe Int
+safediv n m =  if m == 0 then Nothing else Just (n `div` m)
+```
 
 and then modify our evaluator as follows:
-
-   eval           :: Expr -> Maybe Int
-   eval (Val n)   =  Just n
-   eval (Div x y) =  case eval x of
-                Nothing -> Nothing
-            Just n  -> case eval y of
-                      Nothing -> Nothing
-                      Just m  -> safediv n m
-  
+```
+eval           :: Expr -> Maybe Int
+eval (Val n)   =  Just n
+eval (Div x y) =  case eval x of
+             Nothing -> Nothing
+             Just n  -> case eval y of
+                 Nothing -> Nothing
+                 Just m  -> safediv n m
+ ```
+ 
 As in the previous section, we can observe a common pattern, namely
 performing a case analysis on a value of a Maybe type, mapping Nothing
-to itself, and Just x to some result depending upon x.  (Aside: we
+to itself, and Just `x` to some result depending upon `x`.  (Aside: we
 could go further and also take account of the fact that the case
 analysis is performed on the result of an eval, but this would
 lead to the more advanced notion of a monadic fold.)
@@ -103,34 +106,38 @@ to observe that a key notion in the evaluation of division is the
 sequencing of two values of a Maybe type, namely the results of
 evaluating the two arguments of the division.  Based upon this
 observation, we could define a sequencing function
-
-   seqn                    :: Maybe a -> Maybe b -> Maybe (a,b)
-   seqn Nothing   _        =  Nothing
-   seqn _         Nothing  =  Nothing
-   seqn (Just x)  (Just y) =  Just (x,y)
+```
+seqn                    :: Maybe a -> Maybe b -> Maybe (a,b)
+seqn Nothing   _        =  Nothing
+seqn _         Nothing  =  Nothing
+seqn (Just x)  (Just y) =  Just (x,y)
+```
 
 using which our evaluator can now be defined more compactly:
-
-   eval (Val n)   = Just n
-   eval (Div x y) = apply f (eval x `seqn` eval y)
-                    where f (n,m) = safediv n m
+```
+eval (Val n)   = Just n
+eval (Div x y) = apply f (eval x `seqn` eval y)
+                 where f (n,m) = safediv n m
+```
 
 The auxiliary function apply is an analogue of application for Maybe,
 and is used to process the results of the two evaluations:
-
-   apply            :: (a -> Maybe b) -> Maybe a -> Maybe b
-   apply f Nothing  =  Nothing
-   apply f (Just x) =  f x
+```
+apply            :: (a -> Maybe b) -> Maybe a -> Maybe b
+apply f Nothing  =  Nothing
+apply f (Just x) =  f x
+```
 
 In practice, however, using seqn can lead to programs that manipulate
 nested tuples, which can be messy.  For example, the evaluation of
 an operator Op with three arguments may be defined by:
 
-   eval (Op x y z) = apply f (eval x `seqn` (eval y `seqn` eval z))
-                     where f (a,(b,c)) = ...
+```
+eval (Op x y z) = apply f (eval x `seqn` (eval y `seqn` eval z))
+                  where f (a,(b,c)) = ...
+```
 
-
-#Combining sequencing and processing
+##Combining sequencing and processing
 
 The problem of nested tuples can be avoided by returning of our 
 original observation of a common pattern: "performing a case analysis
@@ -138,102 +145,108 @@ on a value of a Maybe type, mapping Nothing to itself, and Just x to
 some result depending upon x".   Abstract this pattern directly gives
 a new sequencing operator that we write as >>=, and read as "then":
 
-   (>>=)   :: Maybe a -> (a -> Maybe b) -> Maybe b
-   m >>= f =  case m of
-                 Nothing -> Nothing
-                 Just x  -> f x
+```
+(>>=)   :: Maybe a -> (a -> Maybe b) -> Maybe b
+m >>= f =  case m of
+              Nothing -> Nothing
+              Just x  -> f x
+```
 
 Replacing the use of case analysis by pattern matching gives a
 more compact definition for this operator:
-
-   (>>=)         :: Maybe a -> (a -> Maybe b) -> Maybe b
-   Nothing  >>= _ = Nothing
-   (Just x) >>= f = f x
+```
+(>>=)         :: Maybe a -> (a -> Maybe b) -> Maybe b
+Nothing  >>= _ = Nothing
+(Just x) >>= f = f x
+```
 
 That is, if the first argument is Nothing then the second argument
 is ignored and Nothing is returned as the result.  Otherwise, if
-the first argument is of the form Just x, then the second argument
-is applied to x to give a result of type Maybe b.
+the first argument is of the form `Just x`, then the second argument
+is applied to `x` to give a result of type `Maybe b`.
 
-The >>= operator avoids the problem of nested tuples of results
+The `>>=` operator avoids the problem of nested tuples of results
 because the result of the first argument is made directly available
 for processing by the second, rather than being paired up with the
-second result to be processed later on.  In this manner, >>= integrates
-the sequencing of values of type Maybe with the processing of their
-result values.  In the literature, >>= is often called "bind", because
+second result to be processed later on.  In this manner, `>>=` integrates
+the sequencing of values of type `Maybe` with the processing of their
+result values.  In the literature, `>>=` is often called "bind", because
 the second argument binds the result of the first.  Note also that
->>= is just apply with the order of its arguments swapped.
+`>>=` is just apply with the order of its arguments swapped.
 
-Using >>=, our evaluator can now be rewritten as:
+Using `>>=`, our evaluator can now be rewritten as:
+```
+eval (Val n)   = Just n
+eval (Div x y) = eval x >>= (\n ->
+                 eval y >>= (\m ->
+                 safediv n m))
+```
 
-   eval (Val n)   = Just n
-   eval (Div x y) = eval x >>= (\n ->
-                    eval y >>= (\m ->
-                    safediv n m))
-
-The case for division can be read as follows: evaluate x and call
-its result value n, then evaluate y and call its result value m,
-and finally combine the two results by applying safediv.  In
+The case for division can be read as follows: evaluate `x` and call
+its result value `n`, then evaluate y and call its result value `m`,
+and finally combine the two results by applying `safediv`.  In
 fact, the scoping rules for lambda expressions mean that the
 parentheses in the case for division can freely be omitted.
 
 Generalising from this example, a typical expression built using
-the >>= operator has the following structure:
+the `>>=` operator has the following structure:
+```
+m1 >>= \x1 ->
+m2 >>= \x2 ->
+...
+mn >>= \xn ->
+f x1 x2 ... xn
+```
 
-   m1 >>= \x1 ->
-   m2 >>= \x2 ->
-   ...
-   mn >>= \xn ->
-   f x1 x2 ... xn
-
-That is, evaluate each of the expression m1,m2,...,mn in turn, and
-combine their result values x1,x2,...,xn by applying the function f.
-The definition of >>= ensures that such an expression only succeeds
+That is, evaluate each of the expression `m1,m2,...,mn` in turn, and
+combine their result values `x1,x2,...,xn` by applying the function `f`.
+The definition of `>>=` ensures that such an expression only succeeds
 (returns a value built using Just) if each mi in the sequence succeeds.
 In other words, the programmer does not have to worry about dealing
 with the possible failure (returning Nothing) of any of the component
-expressions, as this is handled automatically by the >>= operator. 
+expressions, as this is handled automatically by the `>>=` operator. 
 
 Haskell provides a special notation for expressions of the above
 structure, allowing them to be written in a more appealing form:
-
-   do x1 <- m1
-      x2 <- m2
-      ...
-      xn <- mn
-      f x1 x2 ... xn
-
+```haskell
+do x1 <- m1
+   x2 <- m2
+   ...
+   xn <- mn
+   f x1 x2 ... xn
+```
 Hence, for example, our evaluator can be redefined as:
-
-   eval (Val n)   = Just n
-   eval (Div x y) = do n <- eval x
-                       m <- eval y
-                       safediv n m
-
+```
+eval (Val n)   = Just n
+eval (Div x y) = do n <- eval x
+                    m <- eval y
+                    safediv n m
+```
 Exercises:
 
-o Show that the version of eval defined using >>= is equivalent to
-  our original version, by expanding the definition of >>=.
+* Show that the version of `eval` defined using `>>=` is equivalent to
+  our original version, by expanding the definition of `>>=`.
 
-o Redefine seqn x y and eval (Op x y z) using the do notation.
+* Redefine `seqn x y` and `eval (Op x y z)` using the `do` notation.
 
 
-#Monads in Haskell
+##Monads in Haskell
 
-The do notation for sequencing is not specific to the Maybe type,
+The `do` notation for sequencing is not specific to the `Maybe` type,
 but can be used with any type that forms a "monad".  The general
 concept comes from a branch of mathematics called category theory.
-In Haskell, however, a monad is simply a parameterised type m,
+In Haskell, however, a monad is simply a parameterised type `m`,
 together with two functions of the following types:
-
+```
    return :: a -> m a
 
    (>>=)  :: m a -> (a -> m b) -> m b
+```
 
 (Aside: the two functions are also required to satisfy some simple
 properties, but we will return to these later.)  For example, if
-we take m as the parameterised type Maybe, return as the function
-Just :: a -> Maybe a, and >>= as defined in the previous section,
+we take `m` as the parameterised type `Maybe`, return as the function
+`Just :: a -> Maybe a`, and `>>=` as defined in the previous section,
 then we obtain our first example, called the maybe monad.
 
 In fact, we can capture the notion of a monad as a new class
