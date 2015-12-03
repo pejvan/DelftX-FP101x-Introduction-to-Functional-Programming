@@ -1,7 +1,8 @@
-#[PROGRAMMING WITH EFFECTS](http://www.cs.nott.ac.uk/~pszgmh/monads)
+#PROGRAMMING WITH EFFECTS
 
 Graham Hutton, January 2015
 
+[Source](http://www.cs.nott.ac.uk/~pszgmh/monads)
 
 ##Shall we be pure or impure?
 
@@ -309,9 +310,9 @@ that result from recognising and exploiting this fact.
 ##The list monad
 
 The maybe monad provides a simple model of computations that can
-fail, in the sense that a value of type `Maybe` a is either `Nothing`,
+fail, in the sense that a value of type `Maybe a` is either `Nothing`,
 which we can think of as representing failure, or has the form
-`Just x` for some `x` of type a, which we can think of as success.
+`Just x` for some `x` of type `a`, which we can think of as success.
 
 The list monad generalises this notion, by permitting multiple
 results in the case of success.  More precisely, a value of
@@ -369,131 +370,144 @@ Now let us consider the problem of writing functions that
 manipulate some kind of state, represented by a type whose
 internal details are not important for the moment:
 
-   type State = ... 
+```haskell 
+type State = ... 
+```
 
 The most basic form of function on this type is a "state
 transformer" (abbreviated by ST), which takes the current
 state as its argument, and produces a modified state as
 its result, in which the modified state reflects any
 side effects performed by the function:
-
-   type ST = State -> State
+```haskell 
+type ST = State -> State
+```
 
 In general, however, we may wish to return a result value in
 addition to updating the state.  For example, a function for
 incrementing a counter may wish to return the current value
 of the counter.  For this reason, we generalise our type of
 state transformers to also return a result value, with the
-type of such values being a parameter of the ST type:
+type of such values being a parameter of the `ST` type:
+```haskell 
+type ST a = State -> (a, State)
+```
 
-   type ST a = State -> (a, State)
-
-Such functions can be depicted as follows, where s is the input
-state, s' is the output state, and v is the result value:
-                              
+Such functions can be depicted as follows, where `s` is the input
+state, `s'` is the output state, and `v` is the result value:
+```
                        ^
           +-------+    |  v
      s    |       | ---'
    -----> |       |
           |       | ----->
           +-------+   s'
+```
 
 A state transformer may also wish to take argument values.
-However, there is no need to further generalise the ST type
+However, there is no need to further generalise the `ST` type
 to take account of this, because this behaviour can already
 be achieved by exploiting currying.  For example, a state
 transformer that takes a character and returns an integer
-would have type Char -> ST Int, which abbreviates the curried
-function type Char -> State -> (Int, State), depicted by:
-
+would have type `Char -> ST Int`, which abbreviates the curried
+function type `Char -> State -> (Int, State)`, depicted by:
+```
      |                 ^
    c |    +-------+    |  n
      `--> |       | ---'
           |       |
    -----> |       | ----->
      s    +-------+   s'
+```
 
 Returning to the subject of monads, it is now straightforward
-to make ST into an instance of a monadic type:
+to make `ST` into an instance of a monadic type:
+```haskell 
+instance Monad ST where
+   -- return :: a -> ST a
+   return x  =  \s -> (x,s)
 
-   instance Monad ST where
-      -- return :: a -> ST a
-      return x  =  \s -> (x,s)
+   -- (>>=)  :: ST a -> (a -> ST b) -> ST b
+   st >>= f  =  \s -> let (x,s') = st s in f x s'
+```
 
-      -- (>>=)  :: ST a -> (a -> ST b) -> ST b
-      st >>= f  =  \s -> let (x,s') = st s in f x s'
-
-That is, return converts a value into a state transformer that
+That is, `return` converts a value into a state transformer that
 simply returns that value without modifying the state:
-
+```
      |                 ^
    x |    +-------+    | x 
      `----|-------|----'
           |       |
    -------|-------|------>
       s   +-------+   s
+```
 
-In turn, >>= provides a means of sequencing state transformers:
-st >>= f applies the state transformer st to an initial state
-s, then applies the function f to the resulting value x to
-give a second state transformer (f x), which is then applied
-to the modified state s' to give the final result:
-
+In turn, `>>=` provides a means of sequencing state transformers:
+`st >>= f` applies the state transformer `st` to an initial state
+`s`, then applies the function `f` to the resulting value `x` to
+give a second state transformer `(f x)`, which is then applied
+to the modified state `s'` to give the final result:
+```
                                         ^ 
           +-------+   x    +-------+    |
      s    |       | -----> |       | ---'
    -----> |  st   |        |   f   |
           |       | -----> |       | ----->
           +-------+   s'   +-------+
+````
 
-Note that return could also be defined by return x s = (x,s).  
+Note that return could also be defined by `return x s = (x,s)`.  
 However, we prefer the above definition in which the second 
-argument s is shunted to the body of the definition using a
+argument `s` is shunted to the body of the definition using a
 lambda abstraction, because it makes explicit that return is
 a function that takes a single argument and returns a state
-transformer, as expressed by the type a -> ST a:  A similar
-comment applies to the above definition for >>=.
+transformer, as expressed by the type `a -> ST a`:  A similar
+comment applies to the above definition for `>>=`.
 
 We conclude this section with a technical aside.  In Haskell,
 types defined using the "type" mechanism cannot be made into
-instances of classes.  Hence, in order to make ST into an
+instances of classes.  Hence, in order to make `ST` into an
 instance of the class of monadic types, in reality it needs
 to be redefined using the "data" mechanism, which requires
-introducing a dummy constructor (called S for brevity):
-
-   data ST a = S (State -> (a, State))
+introducing a dummy constructor (called `S` for brevity):
+```haskell
+data ST a = S (State -> (a, State))
+````
 
 It is convenient to define our own application function for
 this type, which simply removes the dummy constructor:
+```haskell
+apply         :: ST a -> State -> (a,State)
+apply (S f) x = f x
+```
 
-   apply        :: ST a -> State -> (a,State)
-   apply (S f) x = f x
+In turn, `ST` is now defined as a monadic type as follows:
+```haskell
+instance Monad ST where
+   -- return :: a -> ST a
+   return x   = S (\s -> (x,s))
 
-In turn, ST is now defined as a monadic type as follows:
-
-   instance Monad ST where
-      -- return :: a -> ST a
-      return x   = S (\s -> (x,s))
-
-      -- (>>=)  :: ST a -> (a -> ST b) -> ST b
-      st >>= f   = S (\s -> let (x,s') = apply st s in apply (f x) s')
+   -- (>>=)  :: ST a -> (a -> ST b) -> ST b
+   st >>= f   = S (\s -> let (x,s') = apply st s in apply (f x) s')
+```
 
 Aside: the runtime overhead of manipulating the dummy constructor
-S can be eliminated by defining ST using the "newtype" mechanism
+`S` can be eliminated by defining `ST` using the "newtype" mechanism
 of Haskell, rather than the "data" mechanism.
 
-
-#An example
+##An example
 
 By way of an example of using the state monad, let us first define
-a type of binary trees whose leaves contains values of some type a:
-
-   data Tree a = Leaf a | Node (Tree a) (Tree a)
+a type of binary trees whose leaves contains values of some type `a`:
+```haskell
+data Tree a = Leaf a | Node (Tree a) (Tree a)
+```
 
 Here is a simple example:
-
-   tree :: Tree Char
-   tree =  Node (Node (Leaf 'a') (Leaf 'b')) (Leaf 'c')
+```haskell
+tree :: Tree Char
+tree =  Node (Node (Leaf 'a') (Leaf 'b')) (Leaf 'c')
+```
 
 Now consider the problem of defining a function that labels each 
 leaf in such a tree with a unique or "fresh" integer.  This can
@@ -502,29 +516,31 @@ argument to the function, and returning the next fresh integer
 as an additional result.  In other words, the function can be 
 defined using the notion of a state transformer, in which the
 internal state is simply the next fresh integer:
-
-   type State = Int
+```haskell
+type State = Int
+```
 
 In order to generate a fresh integer, we define a special
 state transformer that simply returns the current state as
 its result, and the next integer as the new state:
+```haskell
+fresh :: ST Int
+fresh =  S (\n -> (n, n+1))
+```
 
-   fresh :: ST Int
-   fresh =  S (\n -> (n, n+1))
-
-Using this, together with the return and >>= primitives that
-are provided by virtue of ST being a monadic type, it is now
+Using this, together with the `return` and `>>=` primitives that
+are provided by virtue of `ST` being a monadic type, it is now
 straightforward to define a function that takes a tree as its
 argument, and returns a state transformer that produces the
 same tree with each leaf labelled by a fresh integer:
-
-   mlabel            :: Tree a -> ST (Tree (a,Int))
-   mlabel (Leaf x)   =  do n <- fresh
-                           return (Leaf (x,n))
-   mlabel (Node l r) =  do l' <- mlabel l
-                           r' <- mlabel r
-                           return (Node l' r')
-
+```haskell
+mlabel            :: Tree a -> ST (Tree (a,Int))
+mlabel (Leaf x)   =  do n <- fresh
+                        return (Leaf (x,n))
+mlabel (Node l r) =  do l' <- mlabel l
+                        r' <- mlabel r
+                        return (Node l' r')
+```
 Note that the programmer does not have to worry about the tedious
 and error-prone task of dealing with the plumbing of fresh labels,
 as this is handled automatically by the state monad.
@@ -532,55 +548,59 @@ as this is handled automatically by the state monad.
 Finally, we can now define a function that labels a tree by
 simply applying the resulting state transformer with zero as
 the initial state, and then discarding the final state:
-
+```haskell
    label  :: Tree a -> Tree (a,Int)
    label t = fst (apply (mlabel t) 0)
+```
 
-For example, label tree gives the following result:
-
-   Node (Node (Leaf ('a',0)) (Leaf ('b',1))) (Leaf ('c',2))
-
+For example, `label tree` gives the following result:
+```haskell
+Node (Node (Leaf ('a',0)) (Leaf ('b',1))) (Leaf ('c',2))
+```
 Exercises:
 
-o Define a function app :: (State -> State) -> ST State, such 
-  that fresh can be redefined by fresh = app (+1).
+*Define a function `app :: (State -> State) -> ST State`, such 
+ that fresh can be redefined by `fresh = app (+1)`.
 
-o Define a function run :: ST a -> State -> a, such that label
-  can be redefined by label t = run (mlabel t) 0.
+*Define a function `run :: ST a -> State -> a`, such that label
+ can be redefined by `label t = run (mlabel t) 0`.
 
 
-#The IO monad
+##The IO monad
 
 Recall that interactive programs in Haskell are written using the
-type IO a of "actions" that return a result of type a, but may
+type `IO` a of "actions" that return a result of type `a`, but may
 also perform some input/output.  A number of primitives are
 provided for building values of this type, including:
+```haskell
+return  :: a -> IO a
+(>>=)   :: IO a -> (a -> IO b) -> IO b
+getChar :: IO Char
+putChar :: Char -> IO ()
+```
 
-   return  :: a -> IO a
-   (>>=)   :: IO a -> (a -> IO b) -> IO b
-   getChar :: IO Char
-   putChar :: Char -> IO ()
-
-The use of return and >>= means that IO is monadic, and hence
-that the do notation can be used to write interactive programs.
+The use of `return` and `>>=` means that `IO` is monadic, and hence
+that the `do` notation can be used to write interactive programs.
 For example, the action that reads a string of characters from
 the keyboard can be defined as follows:
+```haskell
+getLine :: IO String
+getLine =  do x <- getChar
+              if x == '\n' then
+                 return []
+              else
+                 do xs <- getLine
+                    return (x:xs)
+```
 
-   getLine :: IO String
-   getLine =  do x <- getChar
-                 if x == '\n' then
-                    return []
-                 else
-                    do xs <- getLine
-                       return (x:xs)
-
-It is interesting to note that the IO monad can be viewed as a
+It is interesting to note that the `IO` monad can be viewed as a
 special case of the state monad, in which the internal state is
 a suitable representation of the "state of the world":
+```haskell
+type World = ...
 
-   type World = ...
-
-   type IO a  = World -> (a,World)
+type IO a  = World -> (a,World)
+```
 
 That is, an action can be viewed as a function that takes the
 current state of the world as its argument, and produces a value
@@ -591,146 +611,154 @@ efficient manner, but for the purposes of understanding the
 behaviour of actions, the above interpretation can be useful.
 
 
-#Derived primitives
+##Derived primitives
 
 An important benefit of abstracting out the notion of a monad
 is that it then becomes possible to define a number of useful 
 functions that work in an arbitrary monad.  For example, the
 "map" function on lists can be generalised as follows:
-
-   liftM     :: Monad m => (a -> b) -> m a -> m b
-   liftM f mx = do x <- mx
-                   return (f x)
+```haskell
+liftM     :: Monad m => (a -> b) -> m a -> m b
+liftM f mx = do x <- mx
+                return (f x)
+```
 
 Similarly, "concat" on lists generalises to:
-
-   join     :: Monad m => m (m a) -> m a
-   join mmx =  do mx <- mmx
-                  x  <- mx
-                  return x
+```haskell
+join     :: Monad m => m (m a) -> m a
+join mmx =  do mx <- mmx
+               x  <- mx
+               return x
+```
 
 It is sometimes useful to sequence two monadic expressions,
 but discard the result value produced by the first:
+```haskell
+(>>)     :: Monad m => m a -> m b -> m b
+mx >> my =  do _ <- mx
+               y <- my
+               return y
+```
 
-   (>>)     :: Monad m => m a -> m b -> m b
-   mx >> my =  do _ <- mx
-                  y <- my
-                  return y
-
-For example, in the state monad the >> operator is just normal
-sequential composition, written as ; in most languages.
+For example, in the state monad the `>>` operator is just normal
+sequential composition, written as `;` in most languages.
 
 As a final example, we can define a function that transforms
 a list of monadic expressions into a single such expression that
 returns a list of results, by performing each of the argument
 expressions in sequence and collecting their results:
-
-   sequence          :: Monad m => [m a] -> m [a]
-   sequence []       =  return []
-   sequence (mx:mxs) =  do x  <- mx
-                           xs <- sequence mxs
-                           return (x:xs)
-
+```haskell
+sequence          :: Monad m => [m a] -> m [a]
+sequence []       =  return []
+sequence (mx:mxs) =  do x  <- mx
+                        xs <- sequence mxs
+                        return (x:xs)
+```
 Exercises:
+* Define liftM and join more compactly by using >>=.
+* Explain the behaviour of sequence for the maybe monad.
+* Define another monadic generalisation of map:
 
-o Define liftM and join more compactly by using >>=.
+```haskell
+mapM :: Monad m => (a -> m b) -> [a] -> m [b]
+```
 
-o Explain the behaviour of sequence for the maybe monad.
+* Define a monadic generalisation of foldr:
+```haskell
+foldM :: Monad m => (a -> b -> m a) -> a -> [b] -> m a
+```
 
-o Define another monadic generalisation of map:
-
-     mapM :: Monad m => (a -> m b) -> [a] -> m [b]
-
-o Define a monadic generalisation of foldr:
-
-     foldM :: Monad m => (a -> b -> m a) -> a -> [b] -> m a
-
-
-#The monad laws
+##The monad laws
 
 Earlier we mentioned that the notion of a monad requires that the
-return and >>= functions satisfy some simple properties.    The
-first two properties concern the link between return and >>=:
+`return` and `>>=` functions satisfy some simple properties.    The
+first two properties concern the link between `return` and `>>=`:
+```haskell
+return x >>= f  =  f x       (1)
 
-   return x >>= f  =  f x        (1)
+mx >>= return  =  mx         (2)
+```
 
-   mx >>= return  =  mx            (2)
-
-Intuitively, equation (1) states that if we return a value x and
-then feed this value into a function f, this should give the same
-result as simply applying f to x.  Dually, equation (2) states
-that if we feed the results of a computation mx into the function
-return, this should give the same result as simply performing mx.
+Intuitively, equation (1) states that if we return a value `x` and
+then feed this value into a function `f`, this should give the same
+result as simply applying `f` to `x`.  Dually, equation (2) states
+that if we feed the results of a computation `mx` into the function
+`return`, this should give the same result as simply performing `mx`.
 Together, these equations express --- modulo the fact that the
-second argument to >>= involves a binding operation --- that
-return is the left and right identity for >>=.
+second argument to `>>=` involves a binding operation --- that
+`return` is the left and right identity for `>>=`.
 
-The third property concerns the link between >>= and itself, and
-expresses (again modulo binding) that >>= is associative:
+The third property concerns the link between `>>=` and itself, and
+expresses (again modulo binding) that `>>=` is associative:
+```haskell
+(mx >>= f) >>= g
+=                             (3)
+mx >>= (\x -> (f x >>= g))
+```
 
-     (mx >>= f) >>= g
-   =                    (3)
-     mx >>= (\x -> (f x >>= g))
-
-Note that we cannot simply write mx >>= (f >>= g) on the right 
+Note that we cannot simply write `mx >>= (f >>= g)` on the right 
 hand side of this equation, as this would not be type correct.
 
 As an example of the utility of the monad laws, let us see how
-they can be used to prove a useful property of the liftM function
+they can be used to prove a useful property of the `liftM` function
 from the previous section, namely that it distributes over the
 composition operator for functions, in the sense that:
-
-   liftM (f . g)  =  liftM f . liftM g
+```haskell
+liftM (f . g)  =  liftM f . liftM g
+```
 
 This equation generalises the familiar distribution property of
-map from lists to an arbitrary monad.  In order to verify this
-equation, we first rewrite the definition of liftM using >>=:
-
-   liftM f mx  =  mx >>= \x -> return (f x)
+`map` from lists to an arbitrary monad.  In order to verify this
+equation, we first rewrite the definition of `liftM` using `>>=`:
+```haskell
+liftM f mx  =  mx >>= \x -> return (f x)
+```
 
 Now the distribution property can be verified as follows:
-
-     (liftM f . liftM g) mx
-   =    applying .
-     liftM f (liftM g mx)
-   =    applying the second liftM
-     liftM f (mx >>= \x -> return (g x))
-   =    applying liftM 
-     (mx >>= \x -> return (g x)) >>= \y -> return (f y)
-   =    equation (3)
-     mx >>= (\z -> (return (g z) >>= \y -> return (f y)))
-   =    equation (1)
-     mx >>= (\z -> return (f (g z)))
-   =    unapplying . 
-     mx >>= (\z -> return ((f . g) z)))
-   =    unapplying liftM
-     liftM (f . g) mx
+```haskell
+   (liftM f . liftM g) mx
+=    applying .
+   liftM f (liftM g mx)
+=    applying the second liftM
+   liftM f (mx >>= \x -> return (g x))
+=    applying liftM 
+   (mx >>= \x -> return (g x)) >>= \y -> return (f y)
+=    equation (3)
+   mx >>= (\z -> (return (g z) >>= \y -> return (f y)))
+=    equation (1)
+   mx >>= (\z -> return (f (g z)))
+=    unapplying . 
+   mx >>= (\z -> return ((f . g) z)))
+=    unapplying liftM
+   liftM (f . g) mx
+```
 
 Exercise:
 
-o Show that the maybe monad satisfies equations (1), (2) and (3).
+* Show that the maybe monad satisfies equations (1), (2) and (3).
 
 
-#An exercise
+##An exercise
 
 Given the type
-
+```haskell
    data Expr a = Var a | Val Int | Add (Expr a) (Expr a)
+```
 
 of expressions built from variables of type "a", show that this
 type is monadic by completing the following declaration:
+```haskell
+instance Monad Expr where
+   -- return       :: a -> Expr a
+   return x         = ...
 
-   instance Monad Expr where
-      -- return       :: a -> Expr a
-      return x         = ...
-
-      -- (>>=)        :: Expr a -> (a -> Expr b) -> Expr b
-      (Var a)   >>= f  = ...
-      (Val n)   >>= f  = ...
-      (Add x y) >>= f  = ...
-
+   -- (>>=)        :: Expr a -> (a -> Expr b) -> Expr b
+   (Var a)   >>= f  = ...
+   (Val n)   >>= f  = ...
+   (Add x y) >>= f  = ...
+```
 Hint: think carefully about the types involved.  With the aid of an 
-example, explain what the >>= operator for this type does.
+example, explain what the `>>=` operator for this type does.
 
 
 #Other topics
