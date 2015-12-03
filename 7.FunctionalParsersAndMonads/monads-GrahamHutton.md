@@ -283,7 +283,7 @@ class Monad m where
    (>>=)  :: m a -> (a -> m b) -> m b
 ```
 
-That is, a monad is a parameterised type "m" that supports return
+That is, a monad is a parameterised type "m" that supports `return`
 and `>>=` functions of the specified types.  The fact that `m` must be
 a parameterised type, rather than just a type, is inferred from its
 use in the types for the two functions. Using this declaration,
