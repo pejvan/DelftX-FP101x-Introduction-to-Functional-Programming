@@ -559,10 +559,10 @@ Node (Node (Leaf ('a',0)) (Leaf ('b',1))) (Leaf ('c',2))
 ```
 Exercises:
 
-*Define a function `app :: (State -> State) -> ST State`, such 
+* Define a function `app :: (State -> State) -> ST State`, such 
  that fresh can be redefined by `fresh = app (+1)`.
 
-*Define a function `run :: ST a -> State -> a`, such that label
+* Define a function `run :: ST a -> State -> a`, such that label
  can be redefined by `label t = run (mlabel t) 0`.
 
 
