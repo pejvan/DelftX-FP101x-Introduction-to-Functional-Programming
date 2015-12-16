@@ -1,7 +1,6 @@
 Countdown example from chapter 11 of Programming in Haskell,
 Graham Hutton, Cambridge University Press, 2007.
 
-
 > import System.CPUTime
 > import Numeric
 > import System.IO
@@ -38,21 +37,32 @@ Expressions
 Combinatorial functions
 -----------------------
 
-> subs                          :: [a] -> [[a]]
-> subs []                       =  [[]]
-> subs (x:xs)                   =  yss ++ map (x:) yss
->                                  where yss = subs xs
+> subs :: [a] -> [[a]]
+> subs [] = [[]]
+> subs (x:xs) = yss ++ map (x:) yss
+>   where yss = subs xs
 >
-> interleave                    :: a -> [a] -> [[a]]
-> interleave x []               =  [[x]]
-> interleave x (y:ys)           =  (x:y:ys) : map (y:) (interleave x ys)
+> interleave :: a -> [a] -> [[a]]
+> interleave x [] = [[x]]
+> interleave x (y:ys) = (x:y:ys) : map (y:) (interleave x ys)
 > 
-> perms                         :: [a] -> [[a]]
-> perms []                      =  [[]]
-> perms (x:xs)                  =  concat (map (interleave x) (perms xs))
+> perms :: [a] -> [[a]]
+> perms [] = [[]]
+> perms (x:xs) = concat (map (interleave x) (perms xs))
 >
-> choices                       :: [a] -> [[a]]
-> choices                       =  undefined
+> choices :: [a] -> [[a]]
+> choices xs = [zs | ys <- subs xs, zs <- perms ys]
+>
+> removeone :: Eq a => a -> [a] -> [a]
+> removeone x [] = []
+> removeone x (y:ys)
+>    | x == y = ys
+>    | otherwise = y : removeone x ys
+>
+> isChoice :: Eq a => [a] -> [a] -> Bool
+> isChoice [] _ = True
+> isChoice (x:xs) [] = False
+> isChoice (x:xs) ys = elem x ys && isChoice xs (removeone x ys)
 
 Formalising the problem
 -----------------------
@@ -63,8 +73,10 @@ Formalising the problem
 Brute force solution
 --------------------
 
-> split                         :: [a] -> [([a],[a])]
-> split                         =  undefined
+> split :: [a] -> [([a],[a])]
+> split [] = []
+> split [_] = []
+> split (x : xs) = ([x], xs) : [(x : ls, rs) | (ls, rs) <- split xs]
 > 
 > exprs                         :: [Int] -> [Expr]
 > exprs []                      =  []
@@ -182,7 +194,7 @@ Interactive version for testing
 > 
 > main                          :: IO ()
 > main                          =  do hSetBuffering stdout NoBuffering
->                                     putStrLn "\nCOUNTDOWN NUMBERS GAME SOLVER"
+>	                                    putStrLn "\nCOUNTDOWN NUMBERS GAME SOLVER"
 >                                     putStrLn "-----------------------------\n"
 >                                     putStr "Enter the given numbers : "
 >                                     ns <- readLn
